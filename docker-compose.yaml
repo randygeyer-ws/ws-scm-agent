@@ -1,0 +1,66 @@
+version: "2"
+services:
+
+  remediate:
+    build: 
+      context: ./wss-remediate/docker
+    image: wss-remediate:${REM_TAG}
+    container_name: wss-remediate 
+    ports:
+      - "8080:8080"
+    volumes: 
+      - ./conf/prop.json:/etc/usr/local/whitesource/conf/prop.json:ro
+      - ./r/tmp:/tmp:rw
+    networks:
+      ws_demo_bridge:
+        aliases:
+          - remediate-server
+    environment: 
+      - LOG_LEVEL=debug
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "5"
+
+  app:
+    build: 
+      context: ./wss-ghe-app/docker
+    image: wss-ghe-app:${APP_TAG}
+    container_name: wss-app
+    ports:
+      - "9494:9494"
+      - "5678:5678"
+    volumes: 
+      - ./conf:/etc/usr/local/whitesource/conf/:ro
+    networks: 
+      - ws_demo_bridge
+    depends_on: 
+      - remediate
+    logging:
+        driver: local
+        options:
+          max-size: 1m
+          max-file: "5"
+    
+  scanner:
+    build: 
+      context: ./wss-scanner/docker
+    image: wss-scanner:${SCAN_TAG}
+    container_name: wss-scanner
+    ports:
+      - "9393:9393"
+    volumes: 
+      - ./conf:/etc/usr/local/whitesource/conf/:ro
+      - ./s/tmp/unified-agent-log.txt:/tmp/unified-agent-log.txt:rw
+    networks: 
+      - ws_demo_bridge
+    restart: always
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "5"
+        
+networks: 
+  ws_demo_bridge:
